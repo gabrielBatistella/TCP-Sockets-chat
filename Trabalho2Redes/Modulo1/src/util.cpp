@@ -9,29 +9,26 @@ void checkOperation(int result, string errorMsg) {
 
 void setIPandPortFromArgs(int argc, char **argv, string *ip, int *port) {
     switch(argc) {
-        case 1:
+        case 0:
             //*ip = IP_DEFAULT;
             //*port = PORT_DEFAULT;
             break;
-        case 2:
-            *ip = argv[1];
+        case 1:
+            *ip = argv[0];
             //*port = PORT_DEFAULT;
             break;
-        case 3:
-            *ip = argv[1];
-            *port = stoi(argv[2]);
+        case 2:
+            *ip = argv[0];
+            *port = stoi(argv[1]);
             break;
         default:
-            cerr << "Erro no input!" << endl;
-            exit(EXIT_FAILURE);
+            throw invalid_argument("Quantidade incompatível de argumentos");
     }
     if(!ipCheck(*ip)) {
-        cerr << "IP inválido" << endl;
-        exit(EXIT_FAILURE);
+        throw invalid_argument("IP inválido");
     }
     if(!portCheck(*port)) {
-        cerr << "Porta inválida" << endl;
-        exit(EXIT_FAILURE);
+        throw invalid_argument("Porta inválida");
     }
 }
 

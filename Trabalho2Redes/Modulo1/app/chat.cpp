@@ -8,6 +8,7 @@
 #include "../headers/mkSocket.h"
 
 #define MAX_CHARS_IN_MESSAGE 4096
+#define CONNECT_ATTEMPT_TIMEOUT 10
 #define IP_DEFAULT "127.0.0.1"
 #define PORT_DEFAULT 3000
 
@@ -29,13 +30,14 @@ int main(int argc, char *argv[]) {
 
     string targetIP = IP_DEFAULT;
     int targetPort = PORT_DEFAULT;
-    setIPandPortFromArgs(argc, argv, &targetIP, &targetPort);
+    setIPandPortFromArgs(argc - 1, argv + 1, &targetIP, &targetPort);
     
     Socket *socket = new Socket();
-    bool connected = socket->Connect(targetIP, targetPort, 5);
+    bool connected = socket->Connect(targetIP, targetPort, CONNECT_ATTEMPT_TIMEOUT);
 
     if(connected) {
-        cout << "Conectado!" << endl;
+        cout << "Você se conectou ao seu amigo!" << endl;
+        cout << endl;
         createChatThreads(socket);
     }
     else {
@@ -46,6 +48,7 @@ int main(int argc, char *argv[]) {
         thread listeningThread(waitingFriendToConnect, socket, targetIP);
         listeningThread.detach();
         cout << "Esperando conexão na Porta: " << ntohs((uint16_t) socket->GetAddr().sin_port) << endl;
+        cout << endl;
     }
 
     while(!leave) { };
@@ -86,6 +89,7 @@ void waitingFriendToConnect(Socket *listenerSocket, string friendIP) {
         Socket *client = listenerSocket->Accept();
         if(client->GetAddr().sin_addr.s_addr == inet_addr(friendIP.c_str())) {
             cout << "Amigo se conectou!" << endl;
+            cout << endl;
             createChatThreads(client);
             delete listenerSocket;
             return;

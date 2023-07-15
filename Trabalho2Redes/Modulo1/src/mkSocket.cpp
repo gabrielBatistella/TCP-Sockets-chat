@@ -59,6 +59,7 @@ bool Socket::Connect(string ip, int port, int timeout) {
 
             timeval tv;
             tv.tv_sec = (time_t) timeout;
+            tv.tv_usec = (time_t) 0;
 
             int ret = select(this->id + 1, NULL, &sockWritingSet, NULL, &tv);
             checkOperation(ret, "Erro fazendo o connect!");

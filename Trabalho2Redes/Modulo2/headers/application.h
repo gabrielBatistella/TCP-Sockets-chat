@@ -7,13 +7,17 @@
 #include "util.h"
 #include "mkSocket.h"
 
+#define MAX_CHARS_IN_MESSAGE 4096
+#define CONNECT_ATTEMPT_TIMEOUT 10
+
 using namespace std;
 
 class Application {
 
     private:
         Socket * socket;
-        bool isConnected;
+
+        bool CheckConnectCommand(string command, string *ip, int *port);
 
     protected:
         void ReceiveMessages();

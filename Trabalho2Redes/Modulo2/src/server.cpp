@@ -2,7 +2,7 @@
 
 Client * Server::AddClient(Socket *clientSocket) {
     m_cli.lock();
-    if(this->clientsConnected.size() >= this->maxClients) {
+    if((int)(this->clientsConnected.size()) >= this->maxClients) {
         m_cli.unlock();
         return NULL;
     }
@@ -34,7 +34,7 @@ void Server::RemoveClient(Client *clientToRemove) {
 string Server::GenerateNewNickname() {
     this->lastId += 1;
     string nickname = "client_";
-    nickname += this->lastId;
+    nickname = nickname + to_string(this->lastId);
     return nickname;
 }
 

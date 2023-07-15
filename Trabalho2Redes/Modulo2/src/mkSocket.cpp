@@ -59,9 +59,10 @@ bool Socket::Connect(string ip, int port, int timeout) {
 
             timeval tv;
             tv.tv_sec = (time_t) timeout;
+            tv.tv_usec = (time_t) 0;
 
             int ret = select(this->id + 1, NULL, &sockWritingSet, NULL, &tv);
-            checkOperation(ret, "Erro fazendo o connect!");
+            checkOperation(ret, "Erro fazendo o connect_1!");
             if(ret == 0) {
                 cout << "Tentativa de connect deu timeout!" << endl;
             }
@@ -79,12 +80,12 @@ bool Socket::Connect(string ip, int port, int timeout) {
             }
         }
         else {
-            cerr << "Erro fazendo o connect!" << endl;
+            cerr << "Erro fazendo o connect_2!" << endl;
             exit(EXIT_FAILURE);
         }
     }
     else {
-        cerr << "Erro fazendo o connect!" << endl;
+        cerr << "Erro fazendo o connect_3!" << endl;
         exit(EXIT_FAILURE);
     }
 
