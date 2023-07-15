@@ -1,12 +1,15 @@
 #include "../headers/server.h"
 
 Client * Server::AddClient(Socket *clientSocket) {
-    if(this->clientsConnected.size() >= this->maxClients) return NULL;
+    m_cli.lock();
+    if(this->clientsConnected.size() >= this->maxClients) {
+        m_cli.unlock();
+        return NULL;
+    }
     
     string nickname = GenerateNewNickname();
     Client *client = new Client(nickname, clientSocket);
 
-    m_cli.lock();
     this->clientsConnected.push_back(client);
     m_cli.unlock();
     
