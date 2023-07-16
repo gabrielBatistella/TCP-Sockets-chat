@@ -5,8 +5,8 @@ BINARY1 = ./bin/client
 BINARY2 = ./bin/server
 
 all:
-	@g++ -Wall  -Wno-unused-result -Werror -g $(UTIL) $(MAIN1) -o $(BINARY1) -lm -pthread
-	@g++ -Wall  -Wno-unused-result -Werror -g $(UTIL) $(MAIN2) -o $(BINARY2) -lm -pthread
+	@g++ -Wall -Wno-unused-result -Werror -g $(UTIL) $(MAIN1) -o $(BINARY1) -lm -pthread
+	@g++ -Wall -Wno-unused-result -Werror -g $(UTIL) $(MAIN2) -o $(BINARY2) -lm -pthread
 
 client:
 	@$(BINARY1)

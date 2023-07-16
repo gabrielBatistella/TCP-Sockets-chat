@@ -26,6 +26,8 @@ class Channel {
         
         string GetName();
         vector<Client *> GetClientsInChannel();
+        string ClientsInvitedMessage();
+        string ClientsOnChannelMessage(); 
 
         bool IsPrivate();        
         void SetPrivate(bool privateChannel);
