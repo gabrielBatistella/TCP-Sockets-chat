@@ -6,15 +6,19 @@ Socket::Socket(int id, sockaddr_in addr) {
 }
 
 void Socket::Init(in_addr_t ip, in_port_t port) {
+    //Create a socket descriptor
     this->id = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     checkOperation(this->id, "Erro criando o socket!");
 
+    //Ensure reuse of ports
     int opt = 1;
     checkOperation(setsockopt(this->id, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)), "Erro configurando o socket!");
     
+    // Create, set and bind socket
     sockaddr_in myAddr = CreateSocketAddr(ip, port);    
     checkOperation(bind(this->id, (sockaddr *) &(myAddr), sizeof(myAddr)), "Erro fazendo o bind!");
 
+    // Retrieves the current name for the socket descriptor 
     socklen_t addrSize = sizeof(this->addr);
     checkOperation(getsockname(this->id, (sockaddr *) &(this->addr), &addrSize), "Erro obtendo endereço do socket!");
 }
@@ -43,6 +47,7 @@ Socket::Socket() {
 }
 
 bool Socket::Connect(string ip, int port, int timeout) {
+    //Create a socket to link a connection between two clients
     sockaddr_in addrToConnect = CreateSocketAddr(inet_addr(ip.c_str()), htons(port));
 
     int flags;
@@ -61,6 +66,7 @@ bool Socket::Connect(string ip, int port, int timeout) {
             tv.tv_sec = (time_t) timeout;
             tv.tv_usec = (time_t) 0;
 
+            // Returns the total number of socket handles that are ready and contained in the socket structures
             int ret = select(this->id + 1, NULL, &sockWritingSet, NULL, &tv);
             checkOperation(ret, "Erro fazendo o connect!");
             if(ret == 0) {
@@ -95,10 +101,12 @@ bool Socket::Connect(string ip, int port, int timeout) {
 }
 
 void Socket::Listen(int queueSize) {
+    //Waiting for connection
     checkOperation(listen(this->id, queueSize), "Erro habilitando o listen!");
 }
 
 Socket * Socket::Accept() {
+    //Accept connection
     sockaddr_in clientAddr;
     socklen_t clientAddrSize = sizeof(clientAddr);
     int clientSockID = accept(this->id, (sockaddr *) &clientAddr, &clientAddrSize);

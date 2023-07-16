@@ -1,16 +1,72 @@
 #include "../headers/server.h"
 
-Client * Server::AddClient(Socket *clientSocket) {
-    m_cli.lock();
-    if(this->amountClients >= this->maxClients) {
-        m_cli.unlock();
+Channel * Server::CreateChannel(string channelName) {
+    if(FindChannelByName(channelName) != NULL) {
+        return NULL;
+    }
+    
+    Channel *channel = NULL;
+    try{ 
+        channel = new Channel(channelName);
+        m_cha.lock();
+        this->channelsOpen.push_back(channel);
+        m_cha.unlock();
+        return channel;
+    }
+    catch(invalid_argument error) {
+        delete channel;
+        throw error;
+    }
+}
+
+void Server::DeleteChannel(Channel *channel) {
+    m_cha.lock();
+    for(vector<Channel *>::iterator cha = this->channelsOpen.begin() ; cha != this->channelsOpen.end() ; cha++) {
+        if((*cha) == channel) {
+            this->channelsOpen.erase(cha);
+            delete (*cha);
+            break;
+        }
+    }
+    m_cha.unlock();
+}
+
+Channel * Server::FindChannelByName(string channelName) {
+    m_cha.lock();
+    Channel *channelFound = NULL;
+    for(vector<Channel *>::iterator cha = this->channelsOpen.begin() ; cha != this->channelsOpen.end() ; cha++) {
+        if((*cha)->GetName() == channelName) {
+            channelFound = (*cha);
+            break;
+        }
+    }
+    m_cha.unlock();
+    return channelFound;
+}
+
+string Server::ChannelsAvailableMessage() {
+    string message = "";
+    message += "Os canais existentes no momento são:\n";
+    for(vector<Channel *>::iterator cha = this->channelsOpen.begin() ; cha != this->channelsOpen.end() ; cha++) {
+        message += (*cha)->GetName();
+        if((*cha)->IsPrivate()) {
+            message += " (private)";
+        }
+        message += " ==> " + to_string((*cha)->NumberOfClientsConnected()) + " online\n";
+    }
+    message += "\n";
+    return message;
+}
+
+Client * Server::AddClientToServer(Socket *clientSocket) {
+    if(this->clientsConnected.size() >= this->maxClients) {
         return NULL;
     }
     
     Client *client = new Client(clientSocket);  // Já cria com Channel = NULL, mute = false, adm = false e nickname = ""
 
-    this->amountClients += 1;
-    this->clientsConnected[NULL]->push_back(client);
+    m_cli.lock();
+    this->clientsConnected.push_back(client);
     m_cli.unlock();
     
     thread clientHandling([] (Server *server, Client *client) {server->HandleClient(client);}, this, client);
@@ -19,19 +75,46 @@ Client * Server::AddClient(Socket *clientSocket) {
     return client;
 }
 
-void Server::RemoveClient(Client *clientToRemove) {
+void Server::AddClientToChannel(Client *client, Channel *channel) {
+    m_cha.lock();
+    channel->AddClient(client);
+    m_cha.unlock();
+}
+
+void Server::RemoveClientFromServer(Client *clientToRemove) {
+    if(clientToRemove->GetChannel() != NULL) {
+        RemoveClientFromChannel(clientToRemove);
+    }
+
     m_cli.lock();
-    vector<Client *> *clientsList = this->clientsConnected[clientToRemove->GetChannel()];
-    
-    for(vector<Client *>::iterator cli = clientsList->begin() ; cli != clientsList->end() ; cli++) {
+    for(vector<Client *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
         if((*cli) == clientToRemove) {
+            clientsConnected.erase(cli);
             delete (*cli);
-            clientsList->erase(cli);
-            this->amountClients -= 1;
             break;
         }
     }
     m_cli.unlock();
+}
+
+void Server::RemoveClientFromChannel(Client *clientToRemove) {
+    Channel *channel = (Channel *) clientToRemove->GetChannel();
+    bool wasAdm = clientToRemove->IsAdm();
+    
+    m_cha.lock();
+    channel->RemoveClient(clientToRemove);
+    m_cha.unlock();
+
+    if(channel->IsEmpty()) {
+        DeleteChannel(channel);
+        return;
+    }
+    else if(wasAdm) {
+        m_cha.lock();
+        Client *newAdm = channel->ChooseNewAdm();
+        m_cha.unlock();
+        SendToChannel(newAdm->GetNickname() + " é o novo Adm do canal", channel);
+    }
 }
 
 void Server::Log(string msg) {
@@ -43,11 +126,9 @@ void Server::Log(string msg) {
 void Server::SendToChannel(string msg, Channel *channel) {
     Log("(server)" + channel->GetName() + " " + msg);
     string msgToSend = msg + " <<<<<";
-
-    vector<Client *> *clientsInChannel = this->clientsConnected[channel];
-    if(clientsInChannel == NULL) return;
-
-    for(vector<Client *>::iterator cli = clientsInChannel->begin() ; cli != clientsInChannel->end() ; cli++) {
+    
+    vector<Client *> clientList = channel->GetClientsInChannel();
+    for(vector<Client *>::iterator cli = clientList.begin() ; cli != clientList.end() ; cli++) {
         SendToClient(msgToSend, (*cli));
     }
 }
@@ -56,10 +137,8 @@ void Server::SendToChannel(string msg, Channel *channel, Client *sender) {
     Log("(" + sender->GetNickname() + ")" + channel->GetName() + " " + msg);
     string msgToSend = msg;
 
-    vector<Client *> *clientsInChannel = clientsConnected[channel];
-    if(clientsInChannel == NULL) return;
-
-    for(vector<Client *>::iterator cli = clientsInChannel->begin() ; cli != clientsInChannel->end() ; cli++) {
+    vector<Client *> clientList = channel->GetClientsInChannel();
+    for(vector<Client *>::iterator cli = clientList.begin() ; cli != clientList.end() ; cli++) {
         SendToClient(msgToSend, (*cli), sender);
     }
 }
@@ -99,7 +178,7 @@ void Server::ExecuteCommand(string commandReceived, Client *sender) {
         CommandPing(sender);
     }
     else if(command == "/join"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandJoin(string(argv[0]), sender);
         }
     }
@@ -107,41 +186,46 @@ void Server::ExecuteCommand(string commandReceived, Client *sender) {
         CommandPart(sender);
     }
     else if(command == "/nickname"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandNickname(string(argv[0]), sender);
         }
     }
     else if(command == "/kick"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandKick(string(argv[0]), sender);
         }
     }
     else if(command == "/whois"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandWhois(string(argv[0]), sender);
         }
     }
     else if(command == "/mute"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandMute(string(argv[0]), sender);
         }
     }
     else if(command == "/unmute"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandUnmute(string(argv[0]), sender);
         }
     }
     else if(command == "/mode"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             string argument = string(argv[0]);
-            bool convertedArgument = NULL;
-            if(argument == "public") convertedArgument = false;
-            else if(argument == "private") convertedArgument = true;          
-            CommandMode(convertedArgument, sender);
+            if(argument == "public") {
+                CommandMode(false, sender);
+            }
+            else if(argument == "private") {
+                CommandMode(true, sender);
+            }
+            else {       
+                SendToClient("Argumento inválido para mode", sender);
+            }
         }
     }
     else if(command == "/invite"){
-        if(RespondIfNotEnoughArguments(argc, 1)) {
+        if(RespondIfNotEnoughArguments(argc, 1, sender)) {
             CommandInvite(string(argv[0]), sender);
         }
     }
@@ -153,20 +237,21 @@ void Server::ExecuteCommand(string commandReceived, Client *sender) {
 }
 
 void Server::CommandHelp(Client *sender) {
-    string commands = "Os comandos do servidor são:\n";
-    commands += "/connect IP PORT - Conecta ao servidor pelo IP e PORT fornecidos, ligando a aplicação\n";
-    commands += "/quit - Sai do servidor, desligando a aplicação\n";
-    commands += "/help - Obter informações sobre os comandos\n";
-    commands += "/ping - Recebe uma resposta 'pong' do servidor\n";
-    commands += "/join CHANNEL_NAME - Entra no canal desejado\n";
-    commands += "/part - Deixa o canal atual\n";
-    commands += "/nickname NICKNAME - Define/troca seu apelido\n";
-    commands += "/kick NICKNAME - Expulsa usuário do canal (apenas adm)\n";
-    commands += "/whois NICKNAME - Descobre o IP do usuário (apenas adm)\n";
-    commands += "/mute NICKNAME - Muta usuário do canal (apenas adm)\n";
-    commands += "/unmute NICKNAME - Desmuta usuário do canal (apenas adm)\n";
-    commands += "/mode 'public'|'private' - Determina se o canal é público ou privado (apenas adm)\n";
-    commands += "/invite NICKNAME - Convida usuário ao canal, permitindo sua entrada se este for privado (apenas adm)\n\n";
+    string commands = "";
+    commands += "Os comandos do servidor são:\n";
+    commands += " - /connect IP PORT - Conecta ao servidor pelo IP e PORT fornecidos, ligando a aplicação\n";
+    commands += " - /quit - Sai do servidor, desligando a aplicação\n";
+    commands += " - /help - Obter informações sobre os comandos\n";
+    commands += " - /ping - Recebe uma resposta 'pong' do servidor\n";
+    commands += " - /join CHANNEL_NAME - Entra no canal desejado\n";
+    commands += " - /part - Deixa o canal atual\n";
+    commands += " - /nickname NICKNAME - Define/troca seu apelido\n";
+    commands += " - /kick NICKNAME - Expulsa usuário do canal (apenas adm)\n";
+    commands += " - /whois NICKNAME - Descobre o IP do usuário (apenas adm)\n";
+    commands += " - /mute NICKNAME - Muta usuário do canal (apenas adm)\n";
+    commands += " - /unmute NICKNAME - Desmuta usuário do canal (apenas adm)\n";
+    commands += " - /mode 'public'|'private' - Determina se o canal é público ou privado (apenas adm)\n";
+    commands += " - /invite NICKNAME - Convida usuário ao canal, permitindo sua entrada se este for privado (apenas adm)\n\n";
     
     SendToClient(commands, sender);
 }
@@ -193,51 +278,53 @@ void Server::CommandJoin(string channelName, Client *sender) {
         return;
     }
     
-    Channel *channel = this->GetChannelWithName(channelName);  
-    if(channel == NULL) {        
+    Channel *channel = this->FindChannelByName(channelName);  
+    if(channel == NULL) {
         try {
             channel = CreateChannel(channelName);
-            clientsConnected[channel]->push_back(sender);
-            sender->SetChannel(channel);
-            sender->SetAdm(true);
-            sender->SetMute(false);
             Log(sender->GetNickname() + " abriu o canal " + channelName);
+            
+            channel->AddClient(sender);
             SendToChannel(sender->GetNickname() + " ingressou no canal", channel);
         }
-        catch(...) {
-            delete channel;
+        catch(invalid_argument error) {
             SendToClient("O canal não foi aberto porque o nome escolhido é inválido", sender);
         }
     }
-    else if((channel->IsPrivate() && channel->IsClientInvited(sender->GetNickname())) || !(channel->IsPrivate())){
-        clientsConnected[channel]->push_back(sender);
-        sender->SetChannel(channel);
-        sender->SetAdm(false);
-        sender->SetMute(false);
-        SendToChannel(sender->GetNickname() + " ingressou no canal", channel);  
-    } else {
-        SendToClient("O canal em que você tentou ingressar é privado", sender);
+    else {
+        if(channel->AddClient(sender)) {
+            SendToChannel(sender->GetNickname() + " ingressou no canal", channel); 
+        } else {
+            SendToClient("O canal em que você tentou ingressar é privado", sender);
+        }
     }
 }
 
 void Server::CommandPart(Client *sender) {
     if(RespondIfNotInChannel(sender)) return;
 
-    vector<Client *> *clientList = this->clientsConnected[sender->GetChannel()];
-    for(vector<Client *>::iterator cli = clientList->begin() ; cli != clientList->end() ; cli++) {
-        if((*cli) == sender) {
-            clientList->erase(cli);
-            break;
-        }
-    }
-    this->clientsConnected[NULL]->push_back(sender);
-    sender->SetChannel(NULL);
+    Channel *oldChannel = (Channel *) sender->GetChannel();
+    RemoveClientFromChannel(sender);
 
-    
+    SendToChannel(sender->GetNickname() + " saiu do canal", oldChannel);
+    SendToClient("Você saiu do canal", sender);
+    SendToClient(ChannelsAvailableMessage(), sender);
 }
 
 void Server::CommandNickname(string nickname, Client *sender) {
-    
+    for(vector<Client *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
+        if((*cli)->GetNickname() == nickname) {
+            SendToClient("O nickname " + nickname + " já está sendo utilizado", sender);
+            return;
+        }
+    }
+
+    if(sender->SetNickname(nickname)) {
+        SendToClient("O seu nickname agora é " + nickname, sender);
+    }
+    else {
+        SendToClient("O nickname " + nickname + " é inválido", sender);
+    }
 }
 
 void Server::CommandKick(string nickname, Client *sender){
@@ -248,7 +335,7 @@ void Server::CommandKick(string nickname, Client *sender){
     vector<Client *> *clientList = this->clientsConnected[sender->GetChannel()];
     for(vector<Client *>::iterator cli = clientList->begin() ; cli != clientList->end() ; cli++) {
         if((*cli)->GetNickname() == nickname) {
-            SendToChannel("O usuário " + nickname + " foi expulso do canal pelo admin " + sender->GetNickname(), sender->GetChannel());
+            SendToChannel("O usuário " + nickname + " foi expulso do canal pelo admin " + sender->GetNickname(), (Channel *)sender->GetChannel());
             RemoveClient((*cli));
             return;
         }
@@ -300,11 +387,6 @@ void Server::CommandUnmute(string nickname, Client *sender){
 void Server::CommandMode(bool isPrivate, Client *sender) {
     if(RespondIfNotInChannel(sender)) return;
     if(RespondIfClientNotAdm(sender)) return;
-
-    if(isPrivate == NULL) {
-        SendToClient("Valor inválido para mode", sender);
-        return;
-    }
     
     sender->GetChannel()->SetPrivate(isPrivate);
 }
@@ -359,34 +441,6 @@ bool Server::RespondIfNotInChannel(Client *client) {
     else {
         return false;
     }
-}
-
-Channel *Server::CreateChannel(string channelName) {
-    if(GetChannelWithName(channelName) != NULL) return NULL;
-    Channel *channel = new Channel(channelName);
-    clientsConnected[channel] = new vector<Client *>();
-    return channel;
-}
-
-void Server::DeleteChannel(Channel *channel) {
-    vector<Client *> *clientsList = (this->clientsConnected)[channel];
-    for(vector<Client *>::iterator cli = clientsList->begin() ; cli != clientsList->end() ; cli++) {
-        delete (*cli);
-    }
-    clientsList->clear();
-    delete clientsList;
-    delete channel;
-    clientsConnected.erase(channel);
-}
-
-Channel * GetChannelWithName(string channelName) {
-    for(map<Channel *, vector<Client *> *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
-        Channel *channel = (*cli).first;
-        if(channel->GetName() == channelName) {
-            return channel;
-        }
-    }
-    return NULL;
 }
 
 void Server::ListenForClients() {
@@ -466,7 +520,7 @@ Server::~Server() {
         Channel *channel = (*pair).first;
         vector<Client *> *clientsList = (*pair).second;
 
-        for(vector<Client *>::iterator cli = clientsList->begin() ; cli != clientsList->end() ; cli++) {
+        for(vector<Client *>::iterator cli = this->clientsList->begin() ; cli != this->clientsList->end() ; cli++) {
             delete (*cli);
         }
         clientsList->clear();

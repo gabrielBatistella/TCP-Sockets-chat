@@ -3,7 +3,6 @@
 
 #include <string>
 #include "mkSocket.h"
-#include "channel.h"
 
 #define MAX_CHARS_IN_NICKNAME 50
 
@@ -14,7 +13,7 @@ class Client {
     private: 
         string nickname;
         Socket *socket;
-        Channel *channel;
+        void *channel;
         bool mute;
         bool adm;
 
@@ -25,8 +24,8 @@ class Client {
         string GetNickname();
         bool SetNickname(string nickname);
         Socket * GetSocket();
-        Channel * GetChannel();
-        void SetChannel(Channel *channel);
+        void * GetChannel();
+        void SetChannel(void *channel);
         bool IsMute();
         void SetMute(bool mute);
         bool IsAdm();

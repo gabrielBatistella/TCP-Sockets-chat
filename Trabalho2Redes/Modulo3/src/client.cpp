@@ -34,11 +34,11 @@ Socket * Client::GetSocket() {
     return this->socket;
 }
 
-Channel * Client::GetChannel() {
+void * Client::GetChannel() {
     return this->channel;
 }
 
-void Client::SetChannel(Channel *channel) {
+void Client::SetChannel(void *channel) {
     this->channel = channel;
 }
 

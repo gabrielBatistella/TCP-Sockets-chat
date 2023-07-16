@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <string>
-#include <map>
 #include <vector>
 #include <thread>
 #include <mutex>
@@ -17,13 +16,20 @@ class Server {
 
     private:
         Socket *listenerSocket;
-        map<Channel *, vector<Client *> *> clientsConnected;
-        int amountClients = 0;
+        vector<Client *> clientsConnected;
+        vector<Channel *> channelsOpen;
         int maxClients;
-        mutex m_cli, m_log;
+        mutex m_cli, m_cha, m_log;
 
-        Client * AddClient(Socket *clientSocket);
-        void RemoveClient(Client *clientToRemove);
+        Channel * CreateChannel(string channelName);
+        void DeleteChannel(Channel *channel);
+        Channel * FindChannelByName(string channelName);
+        string ChannelsAvailableMessage();
+
+        Client * AddClientToServer(Socket *clientSocket);
+        void AddClientToChannel(Client *client, Channel *channel);
+        void RemoveClientFromServer(Client *clientToRemove);
+        void RemoveClientFromChannel(Client *clientToRemove);
 
         void Log(string msg);
         void SendToChannel(string msg, Channel *channel);
@@ -49,10 +55,6 @@ class Server {
         bool RespondIfNickNonExisting(string nickname, Client *client);
         bool RespondIfNotEnoughArguments(int have, int needed,  Client *client);
         bool RespondIfNotInChannel(Client *client);
-
-        Channel * CreateChannel(string channelName);
-        void DeleteChannel(Channel *channel);
-        Channel * GetChannelWithName(string channelName);
 
     protected:
         void ListenForClients();
