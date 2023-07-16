@@ -75,7 +75,7 @@ void receivingFromFriend(Socket *socket) {
 void sendingToFriend(Socket *socket) {    
     while(true) {
         string fullMsgToSend;
-        cin >> fullMsgToSend;
+        getline(cin, fullMsgToSend);
         for(int i = 0 ; MAX_CHARS_IN_MESSAGE*i < (int) fullMsgToSend.size() ; i++) {
             string msgToSend = fullMsgToSend.substr(MAX_CHARS_IN_MESSAGE*i, MAX_CHARS_IN_MESSAGE);
             cout << "You : " << msgToSend << endl;

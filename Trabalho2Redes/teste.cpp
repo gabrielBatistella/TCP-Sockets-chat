@@ -1,67 +1,114 @@
-// wxWidgets "Hello world" Program
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
+ 
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
-class MyApp: public wxApp
+ 
+class MyApp : public wxApp
 {
 public:
     virtual bool OnInit();
 };
-class MyFrame: public wxFrame
+ 
+class MyFrame : public wxFrame
 {
 public:
-    MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
+    MyFrame();
+ 
 private:
     void OnHello(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
-    wxDECLARE_EVENT_TABLE();
+    void OnButton(wxCommandEvent& event);
+    wxButton* sendButton;
+    wxTextCtrl* userInput; 
+    wxTextCtrl* outputArea;
 };
+ 
 enum
 {
     ID_Hello = 1
 };
-wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
-    EVT_MENU(ID_Hello,   MyFrame::OnHello)
-    EVT_MENU(wxID_EXIT,  MyFrame::OnExit)
-    EVT_MENU(wxID_ABOUT, MyFrame::OnAbout)
-wxEND_EVENT_TABLE()
+ 
 wxIMPLEMENT_APP(MyApp);
+ 
 bool MyApp::OnInit()
 {
-    MyFrame *frame = new MyFrame( "Hello World", wxPoint(50, 50), wxSize(450, 340) );
-    frame->Show( true );
+    MyFrame *frame = new MyFrame();
+    frame->Show(true);
     return true;
 }
-MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
-        : wxFrame(NULL, wxID_ANY, title, pos, size)
+ 
+MyFrame::MyFrame()
+    : wxFrame(NULL, wxID_ANY, "Trabalho de Redes", wxDefaultPosition, wxSize(400,300))
 {
-    wxMenu *menuFile = new wxMenu;
-    menuFile->Append(ID_Hello, "&Hello...\tCtrl-H",
-                     "Help string shown in status bar for this menu item");
-    menuFile->AppendSeparator();
-    menuFile->Append(wxID_EXIT);
+    wxPanel* panel = new wxPanel(this, wxID_ANY);
+
+    wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+
+    wxBoxSizer* inputSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    userInput = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+    userInput->SetMaxLength(4096); 
+
+    wxButton* sendButton = new wxButton(panel, wxID_ANY, "Send");
+
+    inputSizer->Add(userInput, 1, wxEXPAND | wxALL, 10); 
+    inputSizer->Add(sendButton, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10); 
+
+    mainSizer->Add(inputSizer, 0, wxEXPAND | wxALL, 10); 
+
+    outputArea = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+    outputArea->SetBackgroundColour(*wxWHITE); 
+
+    mainSizer->Add(outputArea, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10); 
+
+    panel->SetSizer(mainSizer);
+    
     wxMenu *menuHelp = new wxMenu;
     menuHelp->Append(wxID_ABOUT);
+    menuHelp->AppendSeparator();
+    menuHelp->Append(wxID_EXIT);
+ 
     wxMenuBar *menuBar = new wxMenuBar;
-    menuBar->Append( menuFile, "&File" );
-    menuBar->Append( menuHelp, "&Help" );
+    //menuBar->Append(menuFile, "&File");
+    menuBar->Append(menuHelp, "&Help");
+ 
     SetMenuBar( menuBar );
+ 
     CreateStatusBar();
-    SetStatusText( "Welcome to wxWidgets!" );
+    SetStatusText("Um trabalho de Eduardo, Gabriel, Guilherme e Vitor");
+ 
+    sendButton->Bind(wxEVT_BUTTON, &MyFrame::OnButton, this);
+    Bind(wxEVT_MENU, &MyFrame::OnHello, this, ID_Hello);
+    Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
+    Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
 }
+ 
 void MyFrame::OnExit(wxCommandEvent& event)
 {
-    Close( true );
+    Close(true);
 }
+ 
 void MyFrame::OnAbout(wxCommandEvent& event)
 {
-    wxMessageBox( "This is a wxWidgets' Hello world sample",
-                  "About Hello World", wxOK | wxICON_INFORMATION );
+    wxMessageBox("Trabalho de Redes da Professora Kalinka",
+                 "Sobre", wxOK | wxICON_INFORMATION);
 }
+ 
 void MyFrame::OnHello(wxCommandEvent& event)
 {
     wxLogMessage("Hello world from wxWidgets!");
+}
+
+void MyFrame::OnButton(wxCommandEvent& event){
+    wxString userText = userInput->GetValue(); 
+    
+    outputArea->AppendText("You entered: " + userText + "\n");
+
+    outputArea->SetDefaultStyle(wxTextAttr(*wxBLUE, *wxWHITE)); // Set the text style for the system's response
+    outputArea->AppendText("System: Message Received\n");
+
+    userInput->Clear(); 
 }

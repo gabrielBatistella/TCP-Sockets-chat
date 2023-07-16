@@ -32,7 +32,7 @@ class Server {
         void SendToClient(string msg, Client *receiver);
         void SendToClient(string msg, Client *receiver, Client *sender);
 
-        void ExecuteCommand(string command, Client *sender);
+        void ExecuteCommand(string commandReceived, Client *sender);
         void CommandPing(Client *sender);
         void CommandInvalid(Client *sender);
 

@@ -49,7 +49,7 @@ void Server::SendToAll(string msg) {
     string msgToSend = msg + " <<<<<";
 
     for(vector<Client *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
-        SendToClient(msg, *cli);
+        SendToClient(msgToSend, *cli);
     }
 }
 
@@ -58,7 +58,7 @@ void Server::SendToAll(string msg, Client *sender) {
     string msgToSend = msg;
 
     for(vector<Client *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
-        SendToClient(msg, *cli, sender);
+        SendToClient(msgToSend, *cli, sender);
     }
 }
 
@@ -84,13 +84,20 @@ void Server::SendToClient(string msg, Client *receiver, Client *sender) {
     m_cli.unlock();
 }
 
-void Server::ExecuteCommand(string command, Client *sender) {
+void Server::ExecuteCommand(string commandReceived, Client *sender) {
+    string command;
+    int argc;
+    char **argv;
+    getCommandAndArgs(commandReceived, &command, &argc, &argv);
+
     if(command == "/ping") {
         CommandPing(sender);
     }
     else {
         CommandInvalid(sender);
     }
+
+    freeArgvMemory(argc, &argv);
 }
 
 void Server::CommandPing(Client *sender) {
