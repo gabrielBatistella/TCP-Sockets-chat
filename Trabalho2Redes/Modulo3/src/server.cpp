@@ -23,8 +23,8 @@ void Server::DeleteChannel(Channel *channel) {
     m_cha.lock();
     for(vector<Channel *>::iterator cha = this->channelsOpen.begin() ; cha != this->channelsOpen.end() ; cha++) {
         if((*cha) == channel) {
-            this->channelsOpen.erase(cha);
             delete (*cha);
+            this->channelsOpen.erase(cha);
             break;
         }
     }
@@ -92,17 +92,12 @@ void Server::RemoveClientFromServer(Client *clientToRemove) {
     m_cli.lock();
     for(vector<Client *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
         if((*cli) == clientToRemove) {
-            //this->clientsConnected.erase(cli);
             delete (*cli);
-            cout << this->clientsConnected.size() << endl;
+            this->clientsConnected.erase(cli);
             break;
         }
     }
-
-    //vector<Client *>::iterator it = remove(this->clientsConnected.begin(), this->clientsConnected.end(), clientToRemove);
-    
     m_cli.unlock();
-    cout << "hey" << endl;
 }
 
 void Server::RemoveClientFromChannel(Client *clientToRemove, Channel **channel) {
@@ -375,11 +370,11 @@ void Server::CommandJoin(string channelName, Client *sender) {
 void Server::CommandPart(Client *sender) {
     if(RespondIfNotInChannel(sender)) return;
 
-    Channel *oldChannel = (Channel *) sender->GetChannel();
-    RemoveClientFromChannel(sender, &oldChannel);
+    Channel *channel = (Channel *) sender->GetChannel();
+    RemoveClientFromChannel(sender, &channel);
 
-    if(oldChannel != NULL) {
-        SendToChannel(sender->GetNickname() + " saiu do canal", oldChannel);
+    if(channel != NULL) {
+        SendToChannel(sender->GetNickname() + " saiu do canal", channel);
     }
     SendToClient("Você saiu do canal", sender);
     SendToClient(ChannelsAvailableMessage(), sender);
@@ -398,6 +393,7 @@ void Server::CommandKick(string nickname, Client *sender){
         SendToChannel("O usuário " + nickname + " foi expulso do canal pelo admin " + sender->GetNickname(), channel);
     }
     SendToClient("Você foi expulso do canal pelo admin " + sender->GetNickname(), client);
+    SendToClient(ChannelsAvailableMessage(), client);
 }
 
 void Server::CommandWhois(string nickname, Client *sender){
@@ -463,6 +459,7 @@ void Server::CommandMode(bool isPrivate, Client *sender) {
     else {
         if(isPrivate) {
             channel->SetPrivate(true);
+            channel->ResetInvitedList();
             SendToChannel("O canal agora é privado", channel);
         }
         else {

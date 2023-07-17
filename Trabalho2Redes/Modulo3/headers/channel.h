@@ -17,7 +17,7 @@ class Channel {
         string name;
         vector<Client *> clientsOnChannel;
         vector<string> clientsInvited;
-        bool privateChannel = false;
+        bool privateChannel;
 
         bool ValidateChannelName(string name);
 
@@ -34,6 +34,7 @@ class Channel {
 
         bool IsClientInvited(string nickname);
         void InviteClient(string nickname);
+        void ResetInvitedList();
 
         bool AddClient(Client *client);
         void RemoveClient(Client *client);

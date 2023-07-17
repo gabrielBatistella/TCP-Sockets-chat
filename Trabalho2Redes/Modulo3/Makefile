@@ -14,5 +14,8 @@ client:
 server:
 	@$(BINARY2)
 
-valgrind:
-	@valgrind -s --tool=memcheck --leak-check=full  --track-origins=yes --show-leak-kinds=all --show-reachable=yes $(BINARY)
+valgrind-client:
+	@valgrind -s --tool=memcheck --leak-check=full  --track-origins=yes --show-leak-kinds=all --show-reachable=yes $(BINARY1)
+
+valgrind-server:
+	@valgrind -s --tool=memcheck --leak-check=full  --track-origins=yes --show-leak-kinds=all --show-reachable=yes $(BINARY2)

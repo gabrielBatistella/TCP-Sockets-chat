@@ -45,7 +45,10 @@ string Channel::ClientsOnChannelMessage() {
     message += "Os usuários online no canal são:\n";
     for(vector<Client *>::iterator cli = this->clientsOnChannel.begin() ; cli != this->clientsOnChannel.end() ; cli++) {
         if((*cli)->IsAdm()) {
-            message += "<admin> ";
+            message += " <admin> ";
+        }
+        else {
+            message += "         ";
         }
         message += (*cli)->GetNickname();
         if((*cli)->IsMute()) {
@@ -82,6 +85,10 @@ void Channel::InviteClient(string nickname) {
     }
 }
 
+void Channel::ResetInvitedList() {
+    this->clientsInvited.clear();
+}
+
 bool Channel::AddClient(Client *client) {
     if(IsClientOnChannel(client)) return true;
     if(IsPrivate() && !IsClientInvited(client->GetNickname())) return false;
@@ -105,10 +112,11 @@ void Channel::RemoveClient(Client *client) {
     for(vector<Client *>::iterator cli = this->clientsOnChannel.begin() ; cli != this->clientsOnChannel.end() ; cli++) {
         if((*cli) == client) {
             this->clientsOnChannel.erase(cli);
-
+            
             client->SetChannel(NULL);
             client->SetAdm(false);
             client->SetMute(false);
+            return;
         }
     }
 }
