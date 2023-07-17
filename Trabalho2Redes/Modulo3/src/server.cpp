@@ -274,7 +274,7 @@ void Server::CommandInfo(Client *sender) {
     message += "!--------------------------!\n";
     message += "!......Eduardo Fares.......!\n";
     message += "!....Gabriel Batistella....!\n";
-    message += "!....Guilherme Vilella.....!\n";
+    message += "!....Guilherme Villela.....!\n";
     message += "!.....Vítor Rinaldini......!\n";
     message += "!--------------------------!\n";
     message += "\n";

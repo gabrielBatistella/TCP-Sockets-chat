@@ -7,7 +7,6 @@
 #include "client.h"
 
 #define MAX_CHARS_IN_CHANNELNAME 200
-#define DEFAULT_CHANNEL_NAME "~HOME"
 
 using namespace std;
 
