@@ -20,7 +20,7 @@ Para compilar, basta executar o comando:
 make
 ```
 
-Para rodar o repositório, é necessário abrir o terminal na pasta do módulo desejado, escolher a aplicação e rodar o comando:
+Para rodar o repositório, é necessário abrir o terminal na pasta do módulo desejado, escolher a aplicação e executar o comando:
 
 * Servidor:
 ```
@@ -33,7 +33,7 @@ make client
 ```
 
 * <b>Apenas no Módulo 1:</b>
-Como este modulo trata-se de uma arquiterua cliente-cliente, ele só tem uma aplicação implementada
+Como neste modulo trata-se de uma arquitetura cliente-cliente, ele só tem uma aplicação implementada, então para rodar basta executar:
 ```
 make run
 ```
