@@ -1,4 +1,4 @@
-<h1 align="center"> :file_cabinet: Programação de Sockets </h1>
+<h1 align="center"> :file_cabinet: Chat cliente-servidor com comunicação TCP </h1>
 Trabalho da disciplina SSC0142 Redes de Computadores
 
 ## :memo: Descrição
