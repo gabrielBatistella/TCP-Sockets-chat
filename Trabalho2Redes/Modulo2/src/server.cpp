@@ -1,16 +1,14 @@
 #include "../headers/server.h"
 
-// Add client object to a vector of clients
 Client * Server::AddClient(Socket *clientSocket) {
-    m_cli.lock();
     if((int)(this->clientsConnected.size()) >= this->maxClients) {
-        m_cli.unlock();
         return NULL;
     }
     
     string nickname = GenerateNewNickname();
     Client *client = new Client(nickname, clientSocket);
 
+    m_cli.lock();
     this->clientsConnected.push_back(client);
     m_cli.unlock();
     
@@ -20,7 +18,6 @@ Client * Server::AddClient(Socket *clientSocket) {
     return client;
 }
 
-// Remove client of known clients
 void Server::RemoveClient(Client *clientToRemove) {
     m_cli.lock();
     for(vector<Client *>::iterator cli = this->clientsConnected.begin() ; cli != this->clientsConnected.end() ; cli++) {
@@ -33,7 +30,6 @@ void Server::RemoveClient(Client *clientToRemove) {
     m_cli.unlock();
 }
 
-// Generate a NickName for c
 string Server::GenerateNewNickname() {
     this->lastId += 1;
     string nickname = "client_";
