@@ -4,6 +4,8 @@ Trabalho da disciplina SSC0142 Redes de Computadores
 ## :memo: Descrição
 Esse trabalho foi feito como parte avaliativa da matéria Redes de Computadores (SSC0142), cujo objetivo era desenvolver três módulos de um chat de conversas utilizando o protocolo TCP/IP. Ele é uma adaptação das especificações dadas pelo RFC 1459, que define o IRC, ou seja, uma implementação cliente/servidor, em que diversos clientes se comunicam entre si, por intermédio de um servidor.
 
+Um ponto importante para a simplicidade do código dos módulos como um todo foi a implementação da biblioteca <b>mkSocket</b>, que abstrai as funcionalidades principais de se lidar com sockets TCP (utilizando socket.h), realizando as configurações e tratamento de erros necessários, facilitando muito a utilização de sockets TCP na aplicação.
+
 ## :wrench: Tecnologias utilizadas
 * Linguagem <b>C++</b>
 * Sistema Operacional <b>Ubuntu 20.04 </b>
